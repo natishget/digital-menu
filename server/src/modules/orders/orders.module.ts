@@ -1,0 +1,14 @@
+import { Module } from '@nestjs/common';
+import { OrdersService } from './orders.service';
+import { OrdersController } from './orders.controller';
+import { TablesModule } from '../tables/tables.module';
+import { KotModule } from '../kot/kot.module';
+import { RealtimeModule } from '../realtime/realtime.module';
+
+@Module({
+  imports: [TablesModule, KotModule, RealtimeModule],
+  controllers: [OrdersController],
+  providers: [OrdersService],
+  exports: [OrdersService],
+})
+export class OrdersModule {}
