@@ -1,26 +1,77 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --color-primary: #d97706;
+  --color-secondary: #78350f;
+  --color-accent: #f59e0b;
+  --color-bg: #1c1917;
+  --color-surface: #292524;
+  --color-text: #fafaf9;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+@theme {
+  --color-primary: var(--color-primary);
+  --color-secondary: var(--color-secondary);
+  --color-accent: var(--color-accent);
+  --color-bg: var(--color-bg);
+  --color-surface: var(--color-surface);
+  --color-text: var(--color-text);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-brand-primary: var(--color-primary);
+  --color-brand-secondary: var(--color-secondary);
+  --color-brand-accent: var(--color-accent);
+  --color-brand-bg: var(--color-bg);
+  --color-brand-surface: var(--color-surface);
+  --color-brand-text: var(--color-text);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-geist-sans), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
+
+/* Dynamic System Theme Utility Helpers */
+.bg-theme-bg {
+  background-color: var(--color-bg) !important;
+}
+.bg-theme-surface {
+  background-color: var(--color-surface) !important;
+}
+.bg-theme-primary {
+  background-color: var(--color-primary) !important;
+}
+.bg-theme-secondary {
+  background-color: var(--color-secondary) !important;
+}
+.bg-theme-accent {
+  background-color: var(--color-accent) !important;
+}
+
+.text-theme-primary {
+  color: var(--color-primary) !important;
+}
+.text-theme-secondary {
+  color: var(--color-secondary) !important;
+}
+.text-theme-accent {
+  color: var(--color-accent) !important;
+}
+.text-theme-text {
+  color: var(--color-text) !important;
+}
+
+.border-theme-primary {
+  border-color: var(--color-primary) !important;
+}
+.border-theme-secondary {
+  border-color: var(--color-secondary) !important;
+}
+.border-theme-accent {
+  border-color: var(--color-accent) !important;
+}
+.border-theme-surface {
+  border-color: var(--color-surface) !important;
+}
+
