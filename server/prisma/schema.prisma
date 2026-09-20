@@ -1,0 +1,230 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  CASHIER
+  WAITER
+  KITCHEN_STAFF
+  BARISTA
+}
+
+enum ServiceModel {
+  SELF_SERVED
+  WAITER_ASSISTED
+}
+
+enum FulfillmentStation {
+  BARISTA
+  KITCHEN
+}
+
+enum OrderStatus {
+  PENDING
+  PAYMENT_PENDING
+  PENDING_CASH_CONFIRMATION
+  PAID
+  CONFIRMED
+  PREPARING
+  READY
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  TELEBIRR
+  CBE
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum KotStatus {
+  PENDING
+  PREPARING
+  READY
+}
+
+model User {
+  id            String         @id @default(uuid())
+  username      String         @unique
+  passwordHash  String
+  pinHash       String?
+  name          String
+  role          Role
+  isActive      Boolean        @default(true)
+  refreshTokens RefreshToken[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isRevoked Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model RestaurantSettings {
+  id                  String       @id @default("default")
+  name                String       @default("Abyssinia Coffee & Bistro")
+  serviceModel        ServiceModel @default(SELF_SERVED)
+  themeConfig         Json
+  fastingAutoSchedule Boolean      @default(true)
+  defaultLanguage     String       @default("en")
+  currency            String       @default("ETB")
+  updatedAt           DateTime     @updatedAt
+}
+
+model Table {
+  id                   String        @id @default(uuid())
+  number               Int           @unique
+  name                 String
+  serviceModelOverride ServiceModel?
+  qrToken              String        @unique
+  isActive             Boolean       @default(true)
+  orders               Order[]
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+}
+
+model Category {
+  id        String     @id @default(uuid())
+  nameEn    String
+  nameAm    String
+  sortOrder Int        @default(0)
+  items     MenuItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model MenuItem {
+  id                 String             @id @default(uuid())
+  categoryId         String
+  category           Category           @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  nameEn             String
+  nameAm             String
+  descriptionEn      String?
+  descriptionAm      String?
+  price              Decimal            @db.Decimal(10, 2)
+  isAvailable        Boolean            @default(true)
+  isFastingFriendly  Boolean            @default(false)
+  fulfillmentStation FulfillmentStation @default(KITCHEN)
+  imageUrl           String?
+  modifierGroups     ModifierGroup[]
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+}
+
+model ModifierGroup {
+  id              String           @id @default(uuid())
+  menuItemId      String
+  menuItem        MenuItem         @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  nameEn          String
+  nameAm          String
+  minSelection    Int              @default(0)
+  maxSelection    Int              @default(1)
+  isRequired      Boolean          @default(false)
+  modifierOptions ModifierOption[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+model ModifierOption {
+  id              String        @id @default(uuid())
+  modifierGroupId String
+  modifierGroup   ModifierGroup @relation(fields: [modifierGroupId], references: [id], onDelete: Cascade)
+  nameEn          String
+  nameAm          String
+  priceAdjustment Decimal       @default(0) @db.Decimal(10, 2)
+  isAvailable     Boolean       @default(true)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model Order {
+  id            String       @id @default(uuid())
+  orderNumber   Int          @default(autoincrement())
+  tableId       String
+  table         Table        @relation(fields: [tableId], references: [id])
+  serviceModel  ServiceModel
+  status        OrderStatus  @default(PENDING)
+  subtotal      Decimal      @db.Decimal(10, 2)
+  totalAmount   Decimal      @db.Decimal(10, 2)
+  customerName  String?
+  customerPhone String?
+  notes         String?
+  items         OrderItem[]
+  payments      Payment[]
+  kotTickets    KotTicket[]
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+model OrderItem {
+  id                    String             @id @default(uuid())
+  orderId               String
+  order                 Order              @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItemId            String?
+  historicalItemNameEn  String
+  historicalItemNameAm  String
+  historicalPrice       Decimal            @db.Decimal(10, 2)
+  quantity              Int
+  subtotal              Decimal            @db.Decimal(10, 2)
+  fulfillmentStation    FulfillmentStation
+  itemModifiers         OrderItemModifier[]
+}
+
+model OrderItemModifier {
+  id                         String    @id @default(uuid())
+  orderItemId                String
+  orderItem                  OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  modifierOptionId           String?
+  historicalModifierNameEn   String
+  historicalModifierNameAm   String
+  historicalPrice            Decimal   @db.Decimal(10, 2)
+}
+
+model Payment {
+  id             String        @id @default(uuid())
+  orderId        String
+  order          Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  paymentMethod  PaymentMethod
+  status         PaymentStatus @default(PENDING)
+  amount         Decimal       @db.Decimal(10, 2)
+  currency       String        @default("ETB")
+  transactionRef String?
+  provider       String
+  isMocked       Boolean       @default(false)
+  verifiedAt     DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+}
+
+model KotTicket {
+  id            String             @id @default(uuid())
+  orderId       String
+  order         Order              @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  ticketNumber  String
+  station       FulfillmentStation
+  status        KotStatus          @default(PENDING)
+  prepStartedAt DateTime?
+  readyAt       DateTime?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+}
