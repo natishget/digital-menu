@@ -41,8 +41,8 @@ Ensure PostgreSQL is running on `localhost:5432` with database `digital_menu`.
 ### 2.2 System Navigation Directory
 | Interface / Portal | Purpose | Web URL |
 | :--- | :--- | :--- |
-| **Main Portal Hub** | Landing overview & demo shortcuts | [http://localhost:3000](http://localhost:3000) |
-| **Customer QR Menu** | Table 1 QR Scan Demo | [http://localhost:3000/menu?table_id=table1-id&token=tbl1-tok-8f92a4e1](http://localhost:3000/menu?table_id=table1-id&token=tbl1-tok-8f92a4e1) |
+| **Main Portal Hub** | Auto Redirection to Staff Login / Admin | [http://localhost:3000](http://localhost:3000) |
+| **Customer QR Menu** | Customer Table QR Menu Scan | [http://localhost:3000/menu?table_id=[TABLE_ID]&token=[QR_TOKEN]](http://localhost:3000/menu) |
 | **Waiter Tablet POS** | Staff PIN login & order punching | [http://localhost:3000/waiter](http://localhost:3000/waiter) |
 | **KDS Screen** | Kitchen & Barista order queue | [http://localhost:3000/kds](http://localhost:3000/kds) |
 | **Cashier Terminal** | Payment verification & table settlement | [http://localhost:3000/cashier](http://localhost:3000/cashier) |

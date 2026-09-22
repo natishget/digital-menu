@@ -66,7 +66,7 @@ function CustomerMenuContent() {
   const [transactionRef, setTransactionRef] = useState('');
   const [submittingOrder, setSubmittingOrder] = useState(false);
 
-  // 1. Validate QR Token Session
+  // 1. Validate QR Token Session or Self-Served Settings
   useEffect(() => {
     if (tableId && token) {
       api
@@ -92,7 +92,21 @@ function CustomerMenuContent() {
           setSessionError('Could not connect to server.');
         });
     } else {
-      setSessionValid(true); // Standalone browsing demo mode
+      api
+        .getSettings()
+        .then((settings) => {
+          if (settings && settings.serviceModel === 'WAITER_ASSISTED') {
+            setSessionValid(false);
+            setSessionError('Waiter-Assisted mode requires scanning the QR code printed on your cafe table.');
+          } else {
+            setSessionValid(true);
+            setEffectiveServiceModel('SELF_SERVED');
+          }
+        })
+        .catch(() => {
+          setSessionValid(true);
+          setEffectiveServiceModel('SELF_SERVED');
+        });
     }
   }, [tableId, token, dispatch]);
 
@@ -225,12 +239,26 @@ function CustomerMenuContent() {
   // Submit Order to Backend
   const handlePlaceOrder = async () => {
     if (cart.items.length === 0) return;
+
+    const targetTableId = cart.tableId || tableId || undefined;
+    const targetQrToken = cart.qrToken || token || undefined;
+
+    if (effectiveServiceModel === 'WAITER_ASSISTED' && (!targetTableId || !targetQrToken)) {
+      alert('Table QR code session required to place order in Waiter-Assisted mode. Please scan the QR code at your table.');
+      return;
+    }
+
+    if (effectiveServiceModel === 'SELF_SERVED' && !customerName.trim()) {
+      alert('Please enter your name so staff can call out your order when ready.');
+      return;
+    }
+
     setSubmittingOrder(true);
 
     try {
       const orderPayload = {
-        tableId: cart.tableId || tableId || 'tbl1-id',
-        qrToken: cart.qrToken || token || 'tbl1-tok-8f92a4e1',
+        tableId: targetTableId,
+        qrToken: targetQrToken,
         customerName: customerName.trim() || undefined,
         customerPhone: customerPhone.trim() || undefined,
         notes: orderNotes.trim() || undefined,
@@ -740,14 +768,11 @@ function CustomerMenuContent() {
                       </label>
                       <input
                         type="text"
-                        placeholder="e.g. MOCK-TXN-12345"
+                        placeholder="Enter bank transaction reference"
                         value={transactionRef}
                         onChange={(e) => setTransactionRef(e.target.value)}
                         className="w-full px-3 py-2 text-xs rounded-xl border border-stone-300 focus:outline-none focus:border-amber-600"
                       />
-                      <p className="text-[10px] text-amber-700 mt-1">
-                        Dev mode: Auto-approves mock digital payments instantly.
-                      </p>
                     </div>
                   )}
                 </div>

@@ -199,7 +199,9 @@ export default function KdsPage() {
                         {ticket.ticketNumber}
                       </span>
                       <p className="text-xs font-bold text-[var(--color-accent)]">
-                        Table #{ticket.order?.table?.number || '?'}
+                        {ticket.order?.table
+                          ? `Table #${ticket.order.table.number}`
+                          : `Self-Served: ${ticket.order?.customerName || 'Guest'}`}
                       </p>
                     </div>
 

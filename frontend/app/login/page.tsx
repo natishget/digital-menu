@@ -26,11 +26,11 @@ export default function StaffLoginPage() {
   const [activeTab, setActiveTab] = useState<'username' | 'pin'>('username');
 
   // Username login state
-  const [username, setUsername] = useState('natishget');
-  const [password, setPassword] = useState('Nati@1234');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
 
   // PIN login state
-  const [pin, setPin] = useState('1234');
+  const [pin, setPin] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -98,23 +98,18 @@ export default function StaffLoginPage() {
           </div>
           <h1 className="text-2xl font-extrabold tracking-tight text-white">Staff Portal Authorization</h1>
           <p className="text-xs text-stone-400">
-            Abyssinia Digital Menu & KOT Station Login
+            Digital Menu & KOT Station Login
           </p>
         </div>
 
-        {/* Master Admin Login Info Banner */}
+        {/* Staff Authorization Info Banner */}
         <div className="p-4 rounded-2xl bg-stone-900/90 border border-[var(--color-primary)]/40 flex flex-col gap-2">
-          <div className="flex items-center justify-between text-xs font-bold text-[var(--color-accent)]">
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4" />
-              <span>Master Admin Credentials:</span>
-            </div>
-            <span className="font-mono bg-stone-950 px-2 py-0.5 rounded border border-stone-800 text-[11px]">
-              natishget / Nati@1234
-            </span>
+          <div className="flex items-center gap-2 text-xs font-bold text-[var(--color-accent)]">
+            <ShieldCheck className="w-4 h-4" />
+            <span>Authorized Personnel Access Only</span>
           </div>
           <p className="text-[11px] text-stone-400">
-            Sign in with Master Admin credentials to access Table Management, Menu Catalog, User Management, and Settings. Staff accounts created in the Admin Dashboard can sign in here.
+            Sign in with your assigned staff or administrator credentials to access Table Management, Menu Catalog, Staff POS, Cashier, and KDS displays.
           </p>
         </div>
 
@@ -191,7 +186,7 @@ export default function StaffLoginPage() {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-stone-900 border border-stone-700 text-xs text-white focus:outline-none focus:border-[var(--color-primary)]"
-                  placeholder="natishget"
+                  placeholder="Enter username"
                 />
               </div>
             </div>
@@ -205,7 +200,7 @@ export default function StaffLoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-stone-900 border border-stone-700 text-xs text-white focus:outline-none focus:border-[var(--color-primary)]"
-                  placeholder="Nati@1234"
+                  placeholder="Enter password"
                 />
               </div>
             </div>

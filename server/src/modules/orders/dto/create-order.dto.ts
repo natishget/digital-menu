@@ -19,8 +19,8 @@ export class OrderItemDto {
 
 export class CreateOrderDto {
   @IsString()
-  @IsNotEmpty()
-  tableId: string;
+  @IsOptional()
+  tableId?: string;
 
   @IsString()
   @IsOptional()

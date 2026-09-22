@@ -136,7 +136,9 @@ export default function CashierPage() {
                     </div>
 
                     <p className="text-xs text-stone-300 font-semibold">
-                      Table #{order.table?.number} ({order.table?.name})
+                      {order.table
+                        ? `Table #${order.table.number} (${order.table.name})`
+                        : `Self-Served Pickup: ${order.customerName || 'Guest'}`}
                     </p>
 
                     <div className="flex flex-wrap gap-2 text-[11px] text-stone-400 mt-1">

@@ -16,11 +16,14 @@ export class TablesController {
     return this.tablesService.validateQrToken(tableId, token);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN, Role.MANAGER, Role.WAITER, Role.CASHIER)
   @Get()
   getAllTables() {
     return this.tablesService.getAllTables();
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get(':id')
   getTableById(@Param('id') id: string) {
     return this.tablesService.getTableById(id);

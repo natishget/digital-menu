@@ -22,7 +22,7 @@ export default function WaiterPosPage() {
   const auth = useAppSelector((state) => state.auth);
 
   const [pinModalOpen, setPinModalOpen] = useState(false);
-  const [pinInput, setPinInput] = useState('1234');
+  const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState('');
 
   const [tables, setTables] = useState<any[]>([]);

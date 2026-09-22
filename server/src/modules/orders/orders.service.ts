@@ -20,13 +20,24 @@ export class OrdersService {
       throw new BadRequestException('Order must contain at least one item');
     }
 
-    const validResult = await this.tablesService.validateQrToken(dto.tableId, dto.qrToken || '');
-    if (!validResult.valid || !validResult.table) {
-      throw new BadRequestException(validResult.message || 'Invalid table or QR token session');
+    let tableRecord: any = null;
+    let effectiveServiceModel: ServiceModel = ServiceModel.SELF_SERVED;
+
+    if (dto.tableId && dto.tableId.trim().length > 0) {
+      const validResult = await this.tablesService.validateQrToken(dto.tableId, dto.qrToken || '');
+      if (!validResult.valid || !validResult.table) {
+        throw new BadRequestException(validResult.message || 'Invalid table or QR token session');
+      }
+      tableRecord = validResult.table;
+      effectiveServiceModel = validResult.effectiveServiceModel;
+    } else {
+      const settings = await this.prisma.restaurantSettings.findUnique({ where: { id: 'default' } });
+      effectiveServiceModel = settings?.serviceModel || ServiceModel.SELF_SERVED;
     }
 
-    const tableRecord = validResult.table;
-    const effectiveServiceModel = validResult.effectiveServiceModel;
+    if (effectiveServiceModel === ServiceModel.WAITER_ASSISTED && !tableRecord && !isWaiterPunch) {
+      throw new BadRequestException('Waiter-Assisted mode requires a valid table selection or QR token session.');
+    }
 
     // Fetch DB Menu Items & Modifier Options to calculate authoritative totals
     let calculatedSubtotal = 0;
@@ -103,7 +114,7 @@ export class OrdersService {
     const order = await this.prisma.$transaction(async (tx) => {
       const newOrder = await tx.order.create({
         data: {
-          tableId: tableRecord.id,
+          tableId: tableRecord ? tableRecord.id : null,
           serviceModel: effectiveServiceModel,
           status: initialStatus,
           subtotal: calculatedSubtotal,

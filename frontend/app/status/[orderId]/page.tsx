@@ -150,9 +150,13 @@ export default function OrderStatusPage({ params }: { params: Promise<{ orderId:
             <h1 className="font-extrabold text-xl text-[var(--color-secondary)]">
               Live Order Status
             </h1>
-            {order.table && (
+            {order.table ? (
               <p className="text-xs font-bold text-amber-700">
                 Table #{order.table.number} ({order.table.name})
+              </p>
+            ) : (
+              <p className="text-xs font-bold text-amber-700">
+                Self-Served Order: {order.customerName || 'Guest'}
               </p>
             )}
           </div>

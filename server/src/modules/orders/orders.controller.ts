@@ -28,6 +28,7 @@ export class OrdersController {
     return this.ordersService.getCashierOrdersQueue();
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get('table/:tableId')
   getActiveOrdersForTable(@Param('tableId') tableId: string) {
     return this.ordersService.getActiveOrdersForTable(tableId);
