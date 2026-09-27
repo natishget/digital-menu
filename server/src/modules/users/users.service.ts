@@ -112,7 +112,8 @@ export class UsersService {
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) throw new NotFoundException('User not found');
 
-    if (user.username === 'natishget' || user.id === currentUserId) {
+    const masterUsername = process.env.MASTER_ADMIN_USERNAME || 'natishget';
+    if (user.username === masterUsername || user.id === currentUserId) {
       throw new BadRequestException('Master Admin account cannot be deleted');
     }
 
