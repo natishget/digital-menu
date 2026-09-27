@@ -264,4 +264,142 @@ export class OrdersService {
 
     return { success: true, settledCount: activeOrders.length };
   }
+
+  async getActiveOrdersByPhone(phone: string) {
+    const cleanPhone = phone ? phone.trim() : '';
+    if (!cleanPhone) return [];
+
+    return this.prisma.order.findMany({
+      where: {
+        customerPhone: { equals: cleanPhone, mode: 'insensitive' },
+        status: { notIn: [OrderStatus.COMPLETED, OrderStatus.CANCELLED] },
+      },
+      include: {
+        table: true,
+        items: {
+          include: {
+            itemModifiers: true,
+          },
+        },
+        payments: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async getActiveTableOrderPublic(tableId: string, token: string) {
+    const validResult = await this.tablesService.validateQrToken(tableId, token);
+    if (!validResult.valid || !validResult.table) {
+      throw new BadRequestException(validResult.message || 'Invalid table or QR session');
+    }
+
+    return this.getActiveOrdersForTable(validResult.table.id);
+  }
+
+  async getManagerOrders(query: {
+    search?: string;
+    status?: string;
+    serviceModel?: string;
+    paymentMethod?: string;
+    dateRange?: string;
+  }) {
+    const whereClause: any = {};
+
+    if (query.status && query.status !== 'ALL') {
+      whereClause.status = query.status as OrderStatus;
+    }
+
+    if (query.serviceModel && query.serviceModel !== 'ALL') {
+      whereClause.serviceModel = query.serviceModel as ServiceModel;
+    }
+
+    if (query.paymentMethod && query.paymentMethod !== 'ALL') {
+      whereClause.payments = {
+        some: {
+          paymentMethod: query.paymentMethod as PaymentMethod,
+        },
+      };
+    }
+
+    if (query.dateRange === 'today') {
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+      whereClause.createdAt = { gte: startOfDay };
+    } else if (query.dateRange === '7days') {
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      whereClause.createdAt = { gte: sevenDaysAgo };
+    } else if (query.dateRange === '30days') {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      whereClause.createdAt = { gte: thirtyDaysAgo };
+    }
+
+    if (query.search && query.search.trim()) {
+      const searchTerm = query.search.trim();
+      const isNum = !isNaN(Number(searchTerm));
+
+      whereClause.OR = [
+        ...(isNum ? [{ orderNumber: Number(searchTerm) }] : []),
+        { customerName: { contains: searchTerm, mode: 'insensitive' } },
+        { customerPhone: { contains: searchTerm, mode: 'insensitive' } },
+        { table: { name: { contains: searchTerm, mode: 'insensitive' } } },
+        { items: { some: { historicalItemNameEn: { contains: searchTerm, mode: 'insensitive' } } } },
+        { items: { some: { historicalItemNameAm: { contains: searchTerm, mode: 'insensitive' } } } },
+      ];
+    }
+
+    const orders = await this.prisma.order.findMany({
+      where: whereClause,
+      take: 200,
+      include: {
+        table: true,
+        items: {
+          include: {
+            itemModifiers: true,
+          },
+        },
+        payments: true,
+        kotTickets: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const totalOrdersCount = orders.length;
+    const totalRevenue = orders.reduce((sum, o) => sum + Number(o.totalAmount), 0);
+    const completedCount = orders.filter((o) => o.status === OrderStatus.COMPLETED).length;
+    const activeStatuses: string[] = [OrderStatus.CONFIRMED, OrderStatus.PREPARING, OrderStatus.READY];
+    const activeCount = orders.filter((o) => activeStatuses.includes(o.status)).length;
+    const cancelledCount = orders.filter((o) => o.status === OrderStatus.CANCELLED).length;
+    const averageOrderValue = totalOrdersCount > 0 ? totalRevenue / totalOrdersCount : 0;
+
+    return {
+      metrics: {
+        totalOrdersCount,
+        totalRevenue,
+        completedCount,
+        activeCount,
+        cancelledCount,
+        averageOrderValue,
+      },
+      orders: orders.map((o) => ({
+        ...o,
+        subtotal: Number(o.subtotal),
+        totalAmount: Number(o.totalAmount),
+        items: o.items.map((i) => ({
+          ...i,
+          historicalPrice: Number(i.historicalPrice),
+          subtotal: Number(i.subtotal),
+          itemModifiers: i.itemModifiers.map((m) => ({
+            ...m,
+            historicalPrice: Number(m.historicalPrice),
+          })),
+        })),
+        payments: o.payments.map((p) => ({
+          ...p,
+          amount: Number(p.amount),
+        })),
+      })),
+    };
+  }
 }

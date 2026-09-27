@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -28,10 +28,47 @@ export class OrdersController {
     return this.ordersService.getCashierOrdersQueue();
   }
 
+  @Get('public/phone-active')
+  getActiveOrdersByPhone(@Query('phone') phone: string) {
+    return this.ordersService.getActiveOrdersByPhone(phone);
+  }
+
+  @Put('public/:id/complete')
+  completeCustomerOrder(@Param('id') id: string) {
+    return this.ordersService.updateOrderStatus(id, OrderStatus.COMPLETED);
+  }
+
+  @Get('public/table-active')
+  getActiveTableOrderPublic(
+    @Query('table_id') tableId: string,
+    @Query('token') token: string,
+  ) {
+    return this.ordersService.getActiveTableOrderPublic(tableId, token);
+  }
+
   @UseGuards(JwtAuthGuard)
   @Get('table/:tableId')
   getActiveOrdersForTable(@Param('tableId') tableId: string) {
     return this.ordersService.getActiveOrdersForTable(tableId);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN, Role.MANAGER, Role.CASHIER)
+  @Get('manager/all')
+  getManagerOrders(
+    @Query('search') search?: string,
+    @Query('status') status?: string,
+    @Query('serviceModel') serviceModel?: string,
+    @Query('paymentMethod') paymentMethod?: string,
+    @Query('dateRange') dateRange?: string,
+  ) {
+    return this.ordersService.getManagerOrders({
+      search,
+      status,
+      serviceModel,
+      paymentMethod,
+      dateRange,
+    });
   }
 
   @Get(':id')
