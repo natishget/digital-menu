@@ -69,7 +69,10 @@ export class KotService {
     const tickets = await this.prisma.kotTicket.findMany({
       where: {
         station,
-        status: { in: [KotStatus.PENDING, KotStatus.PREPARING] },
+        status: { in: [KotStatus.PENDING, KotStatus.PREPARING, KotStatus.READY] },
+        order: {
+          status: { notIn: [OrderStatus.COMPLETED, OrderStatus.CANCELLED] },
+        },
       },
       orderBy: { createdAt: 'asc' },
       include: {
@@ -137,5 +140,30 @@ export class KotService {
 
     this.eventsGateway.emitKotTicketUpdated(updatedTicket);
     return updatedTicket;
+  }
+
+  async completeOrderFromKot(ticketId: string) {
+    const ticket = await this.prisma.kotTicket.findUnique({
+      where: { id: ticketId },
+      include: { order: true },
+    });
+
+    if (!ticket) throw new NotFoundException('KOT Ticket not found');
+
+    // Update master order status to COMPLETED
+    const updatedOrder = await this.prisma.order.update({
+      where: { id: ticket.orderId },
+      data: { status: OrderStatus.COMPLETED },
+      include: { table: true, items: true, payments: true },
+    });
+
+    // Update all tickets for this order to READY
+    await this.prisma.kotTicket.updateMany({
+      where: { orderId: ticket.orderId },
+      data: { status: KotStatus.READY, readyAt: new Date() },
+    });
+
+    this.eventsGateway.emitOrderStatusChanged(ticket.orderId, OrderStatus.COMPLETED, updatedOrder);
+    return updatedOrder;
   }
 }

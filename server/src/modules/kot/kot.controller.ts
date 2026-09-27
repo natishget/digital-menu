@@ -23,4 +23,10 @@ export class KotController {
   ) {
     return this.kotService.updateTicketStatus(id, body.status);
   }
+
+  @Put('tickets/:id/complete')
+  @Roles(Role.KITCHEN_STAFF, Role.BARISTA, Role.ADMIN, Role.MANAGER)
+  completeOrderFromKot(@Param('id') id: string) {
+    return this.kotService.completeOrderFromKot(id);
+  }
 }
