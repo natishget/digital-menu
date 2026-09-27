@@ -13,15 +13,36 @@ import {
 } from 'lucide-react';
 import { getSocket } from '../../providers';
 import { api } from '../../../lib/api';
+import { useAppSelector } from '../../../lib/store/hooks';
+import { translations } from '../../../lib/i18n/translations';
+import { formatOrderDateTime, getRelativeTimeAgo } from '../../../lib/formatTime';
 import confetti from 'canvas-confetti';
 
 export default function OrderStatusPage({ params }: { params: Promise<{ orderId: string }> }) {
   const resolvedParams = use(params);
   const orderId = resolvedParams.orderId;
+  const language = useAppSelector((state) => state.theme.language) || 'en';
+  const t = translations[language] || translations.en;
 
   const [order, setOrder] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
+  const [submittingComplete, setSubmittingComplete] = useState(false);
+
+  const handleCustomerComplete = async () => {
+    if (!orderId) return;
+    setSubmittingComplete(true);
+    try {
+      await api.completeCustomerOrder(orderId);
+      triggerConfetti();
+      const updated = await api.getOrder(orderId);
+      setOrder(updated);
+    } catch (err: any) {
+      alert(err.message || 'Failed to complete order');
+    } finally {
+      setSubmittingComplete(false);
+    }
+  };
 
   useEffect(() => {
     if (!orderId) return;
@@ -159,6 +180,17 @@ export default function OrderStatusPage({ params }: { params: Promise<{ orderId:
                 Self-Served Order: {order.customerName || 'Guest'}
               </p>
             )}
+
+            {/* Prominent Order Placement Timestamp Badge */}
+            {order.createdAt && (
+              <div className="mt-1 inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs font-semibold text-amber-900">
+                <Clock className="w-3.5 h-3.5 text-amber-600" />
+                <span>Ordered: {formatOrderDateTime(order.createdAt)}</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-600 text-white font-bold ml-1">
+                  {getRelativeTimeAgo(order.createdAt)}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Progress Timeline */}
@@ -225,6 +257,26 @@ export default function OrderStatusPage({ params }: { params: Promise<{ orderId:
               <span className="text-amber-800">{order.totalAmount} ETB</span>
             </div>
           </div>
+
+          {/* Customer Order Completion Action */}
+          {order.status !== 'COMPLETED' && order.status !== 'CANCELLED' && (
+            <div className="pt-4 border-t border-stone-100">
+              <button
+                onClick={handleCustomerComplete}
+                disabled={submittingComplete}
+                className="w-full py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {submittingComplete ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-5 h-5" />
+                    <span>{t.markReceivedBtn}</span>
+                  </>
+                )}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
