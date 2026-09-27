@@ -15,6 +15,7 @@ import {
 import { api } from '../../lib/api';
 import { useAppDispatch } from '../../lib/store/hooks';
 import { logout } from '../../lib/store/slices/authSlice';
+import { formatOrderTime, getRelativeTimeAgo } from '../../lib/formatTime';
 
 export default function CashierPage() {
   const router = useRouter();
@@ -140,6 +141,13 @@ export default function CashierPage() {
                         ? `Table #${order.table.number} (${order.table.name})`
                         : `Self-Served Pickup: ${order.customerName || 'Guest'}`}
                     </p>
+
+                    {order.createdAt && (
+                      <p className="text-[11px] text-[var(--color-accent)] font-semibold flex items-center gap-1 mt-0.5">
+                        <Clock className="w-3 h-3 text-amber-500" />
+                        <span>Ordered: {formatOrderTime(order.createdAt)} ({getRelativeTimeAgo(order.createdAt)})</span>
+                      </p>
+                    )}
 
                     <div className="flex flex-wrap gap-2 text-[11px] text-stone-400 mt-1">
                       {order.items?.map((item: any) => (

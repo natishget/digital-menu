@@ -16,6 +16,7 @@ import {
 import { api } from '../../lib/api';
 import { useAppDispatch, useAppSelector } from '../../lib/store/hooks';
 import { logout, setCredentials } from '../../lib/store/slices/authSlice';
+import { formatOrderTime, getRelativeTimeAgo } from '../../lib/formatTime';
 
 export default function WaiterPosPage() {
   const dispatch = useAppDispatch();
@@ -304,11 +305,44 @@ export default function WaiterPosPage() {
               ))}
 
               {cartItems.length === 0 && (
-                <p className="text-xs text-stone-500 text-center py-6">
+                <p className="text-xs text-stone-500 text-center py-4">
                   No items in current ticket. Click menu items to add.
                 </p>
               )}
             </div>
+
+            {/* Active Fired Orders for Selected Table */}
+            {selectedTable && activeTableOrders && activeTableOrders.length > 0 && (
+              <div className="mt-4 pt-3 border-t border-stone-800 flex flex-col gap-2">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-amber-500 flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Fired Table Orders ({activeTableOrders.length})</span>
+                </h3>
+
+                <div className="flex flex-col gap-2 max-h-48 overflow-y-auto pr-1">
+                  {activeTableOrders.map((ord: any) => (
+                    <div
+                      key={ord.id}
+                      className="p-2.5 rounded-xl bg-stone-900 border border-stone-700/80 flex flex-col gap-1 text-xs"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-extrabold text-stone-200">Order #{ord.orderNumber}</span>
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-950 text-amber-400 border border-amber-800">
+                          {ord.status}
+                        </span>
+                      </div>
+
+                      {ord.createdAt && (
+                        <p className="text-[10px] font-medium text-stone-400 flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-amber-500/80" />
+                          <span>Fired: {formatOrderTime(ord.createdAt)} ({getRelativeTimeAgo(ord.createdAt)})</span>
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="border-t border-stone-800 pt-3 flex flex-col gap-3">

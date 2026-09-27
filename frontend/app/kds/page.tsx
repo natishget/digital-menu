@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { getSocket } from '../providers';
+import { formatOrderTime, getRelativeTimeAgo } from '../../lib/formatTime';
 
 export default function KdsPage() {
   const router = useRouter();
@@ -89,6 +90,15 @@ export default function KdsPage() {
       await loadTickets();
     } catch (err: any) {
       alert(err.message || 'Failed to update ticket status');
+    }
+  };
+
+  const handleCompleteOrderFromKot = async (ticketId: string) => {
+    try {
+      await api.completeOrderFromKot(ticketId);
+      await loadTickets();
+    } catch (err: any) {
+      alert(err.message || 'Failed to complete order');
     }
   };
 
@@ -205,9 +215,14 @@ export default function KdsPage() {
                       </p>
                     </div>
 
-                    <div className="flex items-center gap-1 text-xs font-extrabold px-2.5 py-1 rounded-lg bg-stone-800 border border-stone-700">
-                      <Clock className="w-3.5 h-3.5" />
-                      <span>{elapsedMins} mins</span>
+                    <div className="flex flex-col items-end gap-1">
+                      <div className="flex items-center gap-1 text-xs font-extrabold px-2.5 py-1 rounded-lg bg-stone-800 border border-stone-700">
+                        <Clock className="w-3.5 h-3.5 text-amber-500" />
+                        <span>{formatOrderTime(ticket.createdAt) || `${elapsedMins} mins`}</span>
+                      </div>
+                      <span className="text-[10px] font-bold text-stone-400">
+                        ({getRelativeTimeAgo(ticket.createdAt)})
+                      </span>
                     </div>
                   </div>
 
@@ -249,13 +264,21 @@ export default function KdsPage() {
                         <Play className="w-4 h-4 fill-white" />
                         <span>Start Preparation</span>
                       </button>
-                    ) : (
+                    ) : ticket.status === 'PREPARING' ? (
                       <button
                         onClick={() => handleUpdateStatus(ticket.id, 'READY')}
-                        className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg transition-colors flex items-center justify-center gap-1.5"
+                        className="w-full py-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs shadow-lg transition-colors flex items-center justify-center gap-1.5"
                       >
                         <CheckCircle2 className="w-4 h-4" />
                         <span>Mark Station Ready</span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleCompleteOrderFromKot(ticket.id)}
+                        className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg transition-colors flex items-center justify-center gap-1.5"
+                      >
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>Mark Order Completed</span>
                       </button>
                     )}
                   </div>
