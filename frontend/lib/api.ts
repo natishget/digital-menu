@@ -48,6 +48,10 @@ export const api = {
   createWaiterOrder: (orderDto: any) =>
     fetchApi('/orders/waiter', { method: 'POST', body: JSON.stringify(orderDto) }),
   getOrder: (id: string) => fetchApi(`/orders/${id}`),
+  getActiveOrdersByPhone: (phone: string) =>
+    fetchApi(`/orders/public/phone-active?phone=${encodeURIComponent(phone)}`),
+  getActiveTableOrderPublic: (tableId: string, token: string) =>
+    fetchApi(`/orders/public/table-active?table_id=${tableId}&token=${token}`),
   getTableOrders: (tableId: string) => fetchApi(`/orders/table/${tableId}`),
   updateOrderStatus: (id: string, status: string) =>
     fetchApi(`/orders/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }),
@@ -59,8 +63,27 @@ export const api = {
   settleTableBill: (tableId: string) =>
     fetchApi(`/orders/settle-table/${tableId}`, { method: 'POST' }),
 
+  completeCustomerOrder: (orderId: string) =>
+    fetchApi(`/orders/public/${orderId}/complete`, { method: 'PUT' }),
   getStationTickets: (station: string) => fetchApi(`/kot/station?station=${station}`),
   updateKotTicketStatus: (id: string, status: string) =>
     fetchApi(`/kot/tickets/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }),
+  completeOrderFromKot: (ticketId: string) =>
+    fetchApi(`/kot/tickets/${ticketId}/complete`, { method: 'PUT' }),
   getCashierQueue: () => fetchApi('/orders/cashier-queue'),
+  getManagerOrders: (params?: {
+    search?: string;
+    status?: string;
+    serviceModel?: string;
+    paymentMethod?: string;
+    dateRange?: string;
+  }) => {
+    const q = new URLSearchParams();
+    if (params?.search) q.append('search', params.search);
+    if (params?.status) q.append('status', params.status);
+    if (params?.serviceModel) q.append('serviceModel', params.serviceModel);
+    if (params?.paymentMethod) q.append('paymentMethod', params.paymentMethod);
+    if (params?.dateRange) q.append('dateRange', params.dateRange);
+    return fetchApi(`/orders/manager/all?${q.toString()}`);
+  },
 };
