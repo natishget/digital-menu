@@ -16,6 +16,9 @@ import {
   AlertTriangle,
   ChevronRight,
   Info,
+  Clock,
+  Search,
+  Utensils,
 } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../../lib/store/hooks';
 import { setLanguage, toggleFastingFilter } from '../../lib/store/slices/themeSlice';
@@ -29,6 +32,7 @@ import {
 } from '../../lib/store/slices/cartSlice';
 import { translations } from '../../lib/i18n/translations';
 import { api } from '../../lib/api';
+import { formatOrderTime, getRelativeTimeAgo } from '../../lib/formatTime';
 
 function CustomerMenuContent() {
   const searchParams = useSearchParams();
@@ -65,6 +69,65 @@ function CustomerMenuContent() {
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'TELEBIRR' | 'CBE'>('CASH');
   const [transactionRef, setTransactionRef] = useState('');
   const [submittingOrder, setSubmittingOrder] = useState(false);
+
+  // Order tracking modal states
+  const [isTrackModalOpen, setIsTrackModalOpen] = useState(false);
+  const [trackPhoneInput, setTrackPhoneInput] = useState('');
+  const [activeOrdersList, setActiveOrdersList] = useState<any[] | null>(null);
+  const [searchingActiveOrders, setSearchingActiveOrders] = useState(false);
+  const [trackErrorMsg, setTrackErrorMsg] = useState('');
+
+  const handleOpenTrackModal = async () => {
+    setIsTrackModalOpen(true);
+    setTrackErrorMsg('');
+    setActiveOrdersList(null);
+
+    if (effectiveServiceModel === 'WAITER_ASSISTED' && (cart.tableId || tableId)) {
+      setSearchingActiveOrders(true);
+      try {
+        const tableOrders = await api.getActiveTableOrderPublic(
+          cart.tableId || tableId!,
+          cart.qrToken || token || '',
+        );
+        if (tableOrders && tableOrders.length > 0) {
+          setActiveOrdersList(tableOrders);
+        } else {
+          setActiveOrdersList([]);
+          setTrackErrorMsg('No active orders currently found for your table.');
+        }
+      } catch (err: any) {
+        setTrackErrorMsg(err.message || 'Could not fetch active table orders.');
+      } finally {
+        setSearchingActiveOrders(false);
+      }
+    } else {
+      if (customerPhone && !trackPhoneInput) {
+        setTrackPhoneInput(customerPhone);
+      }
+    }
+  };
+
+  const handleSearchPhoneOrders = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!trackPhoneInput.trim()) return;
+    setSearchingActiveOrders(true);
+    setTrackErrorMsg('');
+    setActiveOrdersList(null);
+
+    try {
+      const orders = await api.getActiveOrdersByPhone(trackPhoneInput.trim());
+      if (orders && orders.length > 0) {
+        setActiveOrdersList(orders);
+      } else {
+        setActiveOrdersList([]);
+        setTrackErrorMsg(t.noActiveOrdersMsg);
+      }
+    } catch (err: any) {
+      setTrackErrorMsg(err.message || 'Failed to search active orders.');
+    } finally {
+      setSearchingActiveOrders(false);
+    }
+  };
 
   // 1. Validate QR Token Session or Self-Served Settings
   useEffect(() => {
@@ -360,6 +423,15 @@ function CustomerMenuContent() {
               <Leaf className="w-3.5 h-3.5" />
               <span>{t.fastingFilter}</span>
             </button>
+
+            {/* Track Order Button */}
+            <button
+              onClick={handleOpenTrackModal}
+              className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-amber-600 hover:bg-amber-700 text-white shadow-xs transition-all"
+            >
+              <Clock className="w-3.5 h-3.5" />
+              <span>{t.trackOrderBtn}</span>
+            </button>
           </div>
         </div>
       </header>
@@ -436,7 +508,8 @@ function CustomerMenuContent() {
                             )}
                           </div>
                           {item.description && (
-                            <p className="text-xs text-stone-500 mt-1 line-clamp-2">
+                            <p className="text-xs text-stone-600 mt-1.5 leading-relaxed line-clamp-3">
+                              <span className="font-semibold text-amber-800">Composition: </span>
                               {item.description}
                             </p>
                           )}
@@ -516,8 +589,19 @@ function CustomerMenuContent() {
               </button>
             </div>
 
-            {/* Modifiers List */}
+            {/* Modifiers List & Food Composition */}
             <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-6">
+              {customizingItem.description && (
+                <div className="p-3.5 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex flex-col gap-1 text-xs">
+                  <span className="font-bold text-amber-900 flex items-center gap-1.5">
+                    <Utensils className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Food Composition & Ingredients:</span>
+                  </span>
+                  <p className="text-stone-700 leading-relaxed font-normal">
+                    {customizingItem.description}
+                  </p>
+                </div>
+              )}
               {customizingItem.modifierGroups?.map((group: any) => (
                 <div key={group.id} className="flex flex-col gap-2">
                   <div className="flex items-center justify-between">
@@ -800,6 +884,123 @@ function CustomerMenuContent() {
                   </>
                 )}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Active Order Tracking Modal */}
+      {isTrackModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-[var(--color-surface)] rounded-3xl border border-stone-200 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="p-4 border-b border-stone-200 flex items-center justify-between bg-stone-50">
+              <div className="flex items-center gap-2">
+                <Clock className="w-5 h-5 text-amber-700" />
+                <h3 className="font-bold text-base text-[var(--color-secondary)]">
+                  {t.trackOrderBtn}
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsTrackModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-stone-200 flex items-center justify-center text-stone-600 hover:bg-stone-300"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-5 flex flex-col gap-4 max-h-[75vh] overflow-y-auto">
+              {effectiveServiceModel === 'SELF_SERVED' && (
+                <form onSubmit={handleSearchPhoneOrders} className="flex flex-col gap-3">
+                  <label className="block text-xs font-semibold text-stone-700">
+                    {t.enterPhonePrompt}
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="0911223344"
+                      value={trackPhoneInput}
+                      onChange={(e) => setTrackPhoneInput(e.target.value)}
+                      className="flex-1 px-3.5 py-2.5 text-xs rounded-xl border border-stone-300 focus:outline-none focus:border-amber-600 font-medium"
+                    />
+                    <button
+                      type="submit"
+                      disabled={searchingActiveOrders || !trackPhoneInput.trim()}
+                      className="px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      {searchingActiveOrders ? (
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <>
+                          <Search className="w-4 h-4" />
+                          <span>{t.searchOrdersBtn}</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {searchingActiveOrders && (
+                <div className="py-8 flex justify-center items-center">
+                  <div className="w-6 h-6 border-3 border-amber-600 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              )}
+
+              {trackErrorMsg && !searchingActiveOrders && (
+                <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-medium text-center">
+                  {trackErrorMsg}
+                </div>
+              )}
+
+              {activeOrdersList && activeOrdersList.length > 0 && !searchingActiveOrders && (
+                <div className="flex flex-col gap-3 mt-2">
+                  <h4 className="font-bold text-xs uppercase tracking-wider text-amber-900">
+                    {t.selectActiveOrderTitle} ({activeOrdersList.length})
+                  </h4>
+
+                  <div className="flex flex-col gap-2.5">
+                    {activeOrdersList.map((ord: any) => (
+                      <button
+                        key={ord.id}
+                        onClick={() => {
+                          setIsTrackModalOpen(false);
+                          router.push(`/status/${ord.id}`);
+                        }}
+                        className="p-3.5 rounded-2xl border border-stone-200 hover:border-amber-500 bg-white hover:bg-amber-50/50 text-left flex items-center justify-between transition-all group shadow-xs"
+                      >
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-extrabold text-sm text-stone-900">
+                              Order #{ord.orderNumber}
+                            </span>
+                            <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 text-[10px] font-bold border border-amber-200">
+                              {ord.status}
+                            </span>
+                          </div>
+                          <p className="text-xs text-stone-500">
+                            {ord.table ? `Table #${ord.table.number}` : `Self-Served: ${ord.customerName || 'Guest'}`} • {ord.items?.length || 0} items
+                          </p>
+                          {ord.createdAt && (
+                            <p className="text-[11px] text-amber-700 font-semibold flex items-center gap-1 mt-0.5">
+                              <Clock className="w-3 h-3 text-amber-600" />
+                              <span>Ordered: {formatOrderTime(ord.createdAt)} ({getRelativeTimeAgo(ord.createdAt)})</span>
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <span className="font-black text-sm text-amber-800">
+                            {ord.totalAmount} ETB
+                          </span>
+                          <ChevronRight className="w-4 h-4 text-stone-400 group-hover:text-amber-600 group-hover:translate-x-0.5 transition-transform" />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
