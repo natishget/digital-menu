@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { Role } from '@prisma/client';
+import { CreateUserDto } from './dto/create-user.dto';
 
 @Injectable()
 export class AuthService {
@@ -11,7 +12,7 @@ export class AuthService {
     private prisma: PrismaService,
     private jwtService: JwtService,
     private configService: ConfigService,
-  ) {}
+  ) { }
 
   async login(dto: { username: string; password: string }) {
     const user = await this.prisma.user.findUnique({
@@ -28,6 +29,25 @@ export class AuthService {
     }
 
     return this.generateTokenPair(user.id, user.username, user.role);
+  }
+
+  async create(createUserDto: CreateUserDto) {
+    const user = await this.prisma.user.findUnique({
+      where: { username: createUserDto.username },
+    });
+    if (user) {
+      throw new BadRequestException('Username already exists');
+    }
+
+    const passwordHash = await bcrypt.hash(createUserDto.password, 10);
+    const { password, ...rest } = createUserDto;
+    return await this.prisma.user.create({
+      data: {
+        ...rest,
+        passwordHash,
+        role: Role.ADMIN,
+      },
+    });
   }
 
   async waiterPinLogin(dto: { tableId?: string; pin: string }) {
@@ -98,7 +118,6 @@ export class AuthService {
     tableId?: string,
   ) {
     const payload = { sub: userId, username, role, tableId };
-    
     const jwtExpiresIn = this.configService.getOrThrow<string>('JWT_EXPIRES_IN');
     const jwtRefreshSecret = this.configService.getOrThrow<string>('JWT_REFRESH_SECRET');
     const jwtRefreshExpiresIn = this.configService.getOrThrow<string>('JWT_REFRESH_EXPIRES_IN');
