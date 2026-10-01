@@ -17,6 +17,9 @@ const notoSansEthiopic = Noto_Sans_Ethiopic({
 export const metadata: Metadata = {
   title: "Abyssinia Digital Menu & KOT System",
   description: "Cloud-Based QR Digital Menu, Fasting Engine & Kitchen Order Ticketing (KOT) System",
+  icons: {
+    icon: "/logo.jpeg"
+  }
 };
 
 export default function RootLayout({

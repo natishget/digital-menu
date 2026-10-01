@@ -2,6 +2,7 @@ import { Controller, Post, Body, Get, UseGuards, Request } from '@nestjs/common'
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { CreateUserDto } from './dto/create-user.dto';
+import { ThrottlerGuard } from '@nestjs/throttler';
 
 @Controller('auth')
 export class AuthController {
@@ -11,12 +12,12 @@ export class AuthController {
   async create(@Body() createUserDto: CreateUserDto) {
     return this.authService.create(createUserDto);
   }
-
+  @UseGuards(ThrottlerGuard)
   @Post('login')
   async login(@Body() body: { username: string; password: string }) {
     return this.authService.login(body);
   }
-
+  @UseGuards(ThrottlerGuard)
   @Post('waiter-pin')
   async waiterPinLogin(@Body() body: { tableId?: string; pin: string }) {
     return this.authService.waiterPinLogin(body);
