@@ -221,6 +221,19 @@ export class OrdersService {
     return updated;
   }
 
+  async completeCustomerOrder(id: string) {
+    const order = await this.prisma.order.findUnique({ where: { id } });
+    if (!order) throw new NotFoundException('Order not found');
+
+    if (order.status !== OrderStatus.READY) {
+      throw new BadRequestException(
+        'Order can only be marked as completed after it is marked READY by the kitchen or barista',
+      );
+    }
+
+    return this.updateOrderStatus(id, OrderStatus.COMPLETED);
+  }
+
   async settleTableBill(tableId: string) {
     const activeOrders = await this.getActiveOrdersForTable(tableId);
     if (activeOrders.length === 0) {

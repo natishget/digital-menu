@@ -35,7 +35,7 @@ export class OrdersController {
 
   @Put('public/:id/complete')
   completeCustomerOrder(@Param('id') id: string) {
-    return this.ordersService.updateOrderStatus(id, OrderStatus.COMPLETED);
+    return this.ordersService.completeCustomerOrder(id);
   }
 
   @Get('public/table-active')
