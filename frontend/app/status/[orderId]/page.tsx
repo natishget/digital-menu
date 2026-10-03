@@ -9,7 +9,6 @@ import {
   Coffee,
   Sparkles,
   ArrowLeft,
-  QrCode,
 } from 'lucide-react';
 import { getSocket } from '../../providers';
 import { api } from '../../../lib/api';
@@ -17,6 +16,18 @@ import { useAppSelector } from '../../../lib/store/hooks';
 import { translations } from '../../../lib/i18n/translations';
 import { formatOrderDateTime, getRelativeTimeAgo } from '../../../lib/formatTime';
 import confetti from 'canvas-confetti';
+
+const triggerConfetti = () => {
+  try {
+    confetti({
+      particleCount: 80,
+      spread: 70,
+      origin: { y: 0.6 },
+    });
+  } catch {
+    // Ignore if canvas-confetti unavailable
+  }
+};
 
 export default function OrderStatusPage({ params }: { params: Promise<{ orderId: string }> }) {
   const resolvedParams = use(params);
@@ -47,7 +58,6 @@ export default function OrderStatusPage({ params }: { params: Promise<{ orderId:
   useEffect(() => {
     if (!orderId) return;
 
-    // Load initial order data
     api
       .getOrder(orderId)
       .then((res) => {
@@ -59,7 +69,6 @@ export default function OrderStatusPage({ params }: { params: Promise<{ orderId:
       .catch((err) => setError('Order not found or access denied.'))
       .finally(() => setLoading(false));
 
-    // Connect to WebSocket room
     const socket = getSocket();
     socket.emit('join:order', { orderId });
 
@@ -90,29 +99,31 @@ export default function OrderStatusPage({ params }: { params: Promise<{ orderId:
         origin: { y: 0.6 },
       });
     } catch (e) {
-      // Ignore if unavailable
+      // Ignore if canvas-confetti unavailable
     }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-stone-100 flex items-center justify-center p-4">
-        <div className="w-8 h-8 border-4 border-amber-600 border-t-transparent rounded-full animate-spin"></div>
+      <div className="min-h-screen bg-stone-950 flex items-center justify-center p-4">
+        <div className="w-8 h-8 border-3 border-amber-600 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
 
   if (error || !order) {
     return (
-      <div className="min-h-screen bg-stone-100 flex flex-col items-center justify-center p-4 text-center">
-        <h2 className="text-xl font-bold text-stone-900 mb-2">Order Not Found</h2>
-        <p className="text-sm text-stone-600 mb-6">{error}</p>
-        <Link
-          href="/"
-          className="px-5 py-2.5 rounded-xl bg-amber-600 text-white font-bold text-xs"
-        >
-          Return Home
-        </Link>
+      <div className="min-h-screen bg-stone-950 text-stone-100 flex flex-col items-center justify-center p-4 text-center">
+        <div className="max-w-md w-full bg-stone-900 border border-stone-800 p-8 rounded-2xl shadow-xl flex flex-col items-center gap-4">
+          <h2 className="text-lg font-bold text-stone-100">Order Not Found</h2>
+          <p className="text-xs text-stone-400">{error}</p>
+          <Link
+            href="/menu"
+            className="mt-2 px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs transition-colors"
+          >
+            Return to Menu
+          </Link>
+        </div>
       </div>
     );
   }
@@ -146,47 +157,46 @@ export default function OrderStatusPage({ params }: { params: Promise<{ orderId:
   const currentStepIdx = getStepIndex(order.status);
 
   return (
-    <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] flex flex-col items-center p-4 py-8 font-sans">
+    <div className="min-h-screen bg-stone-950 text-stone-100 flex flex-col items-center p-4 py-8 font-sans">
       <div className="max-w-md w-full flex flex-col gap-6">
-        {/* Header Navigation */}
+        {/* Navigation Bar */}
         <div className="flex items-center justify-between">
           <Link
-            href="/"
-            className="flex items-center gap-1 text-xs font-bold text-amber-800 hover:underline"
+            href="/menu"
+            className="flex items-center gap-1.5 text-xs font-semibold text-amber-500 hover:underline"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Return to Menu</span>
           </Link>
-          <span className="text-xs font-bold px-3 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-200">
+          <span className="text-xs font-bold px-3 py-1 rounded-full bg-amber-950 text-amber-300 border border-amber-800">
             Order #{order.orderNumber}
           </span>
         </div>
 
-        {/* Status Card */}
-        <div className="bg-[var(--color-surface)] p-6 rounded-3xl border border-stone-200 shadow-xl flex flex-col gap-6">
+        {/* Status Main Card */}
+        <div className="bg-stone-900 border border-stone-800 p-6 rounded-2xl shadow-2xl flex flex-col gap-6">
           <div className="text-center flex flex-col items-center gap-2">
-            <div className="w-16 h-16 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center font-bold shadow-md shadow-amber-600/20">
-              <Coffee className="w-8 h-8" />
+            <div className="w-14 h-14 rounded-xl bg-amber-950/80 border border-amber-800 text-amber-400 flex items-center justify-center font-bold">
+              <Coffee className="w-7 h-7" />
             </div>
-            <h1 className="font-extrabold text-xl text-[var(--color-secondary)]">
+            <h1 className="font-bold text-lg text-stone-100">
               Live Order Status
             </h1>
             {order.table ? (
-              <p className="text-xs font-bold text-amber-700">
+              <p className="text-xs font-medium text-amber-400">
                 Table #{order.table.number} ({order.table.name})
               </p>
             ) : (
-              <p className="text-xs font-bold text-amber-700">
+              <p className="text-xs font-medium text-amber-400">
                 Self-Served Order: {order.customerName || 'Guest'}
               </p>
             )}
 
-            {/* Prominent Order Placement Timestamp Badge */}
             {order.createdAt && (
-              <div className="mt-1 inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs font-semibold text-amber-900">
-                <Clock className="w-3.5 h-3.5 text-amber-600" />
+              <div className="mt-1 inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-stone-950 border border-stone-800 text-[11px] font-medium text-stone-300">
+                <Clock className="w-3.5 h-3.5 text-amber-500" />
                 <span>Ordered: {formatOrderDateTime(order.createdAt)}</span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-600 text-white font-bold ml-1">
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800 font-semibold ml-1">
                   {getRelativeTimeAgo(order.createdAt)}
                 </span>
               </div>
@@ -194,7 +204,7 @@ export default function OrderStatusPage({ params }: { params: Promise<{ orderId:
           </div>
 
           {/* Progress Timeline */}
-          <div className="flex flex-col gap-4 relative pl-4 border-l-2 border-stone-200 my-2">
+          <div className="flex flex-col gap-4 relative pl-4 border-l-2 border-stone-800 my-2">
             {steps.map((step, idx) => {
               const isPastOrCurrent = idx <= currentStepIdx;
               const isCurrent = idx === currentStepIdx;
@@ -203,31 +213,31 @@ export default function OrderStatusPage({ params }: { params: Promise<{ orderId:
               return (
                 <div key={step.key} className="flex items-center gap-3 relative">
                   <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all -ml-[21px] ${
+                    className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all -ml-[21px] ${
                       isCurrent
-                        ? 'bg-amber-600 text-white shadow-md ring-4 ring-amber-100'
+                        ? 'bg-amber-600 text-white ring-4 ring-amber-950'
                         : isPastOrCurrent
                           ? 'bg-emerald-600 text-white'
-                          : 'bg-stone-200 text-stone-400'
+                          : 'bg-stone-800 text-stone-500'
                     }`}
                   >
-                    <Icon className="w-4 h-4" />
+                    <Icon className="w-3.5 h-3.5" />
                   </div>
                   <div>
                     <p
-                      className={`text-xs font-bold ${
+                      className={`text-xs font-semibold ${
                         isCurrent
-                          ? 'text-amber-800 text-sm'
+                          ? 'text-amber-400 font-bold'
                           : isPastOrCurrent
-                            ? 'text-stone-900'
-                            : 'text-stone-400'
+                            ? 'text-stone-200'
+                            : 'text-stone-500'
                       }`}
                     >
                       {step.label}
                     </p>
                     {isCurrent && (
-                      <p className="text-[11px] text-amber-700 mt-0.5">
-                        Live Status: {order.status}
+                      <p className="text-[11px] text-stone-400 mt-0.5">
+                        Current Status: <span className="text-amber-300 font-medium">{order.status}</span>
                       </p>
                     )}
                   </div>
@@ -237,44 +247,59 @@ export default function OrderStatusPage({ params }: { params: Promise<{ orderId:
           </div>
 
           {/* Order Items Summary */}
-          <div className="pt-4 border-t border-stone-100 flex flex-col gap-2">
-            <h3 className="font-bold text-xs uppercase tracking-wider text-stone-500">
+          <div className="pt-4 border-t border-stone-800 flex flex-col gap-2.5">
+            <h3 className="font-bold text-xs uppercase tracking-wider text-stone-400">
               Ordered Items
             </h3>
             <div className="flex flex-col gap-2">
               {order.items?.map((item: any) => (
                 <div key={item.id} className="flex items-center justify-between text-xs">
-                  <span className="font-medium text-stone-800">
+                  <span className="font-medium text-stone-300">
                     {item.quantity}x {item.historicalItemNameEn}
                   </span>
-                  <span className="font-bold text-amber-800">{item.subtotal} ETB</span>
+                  <span className="font-extrabold text-amber-400">{item.subtotal} ETB</span>
                 </div>
               ))}
             </div>
 
-            <div className="pt-2 mt-2 border-t border-stone-100 flex justify-between font-black text-sm text-stone-900">
+            <div className="pt-3 mt-1 border-t border-stone-800 flex justify-between font-extrabold text-sm text-stone-100">
               <span>Total Paid</span>
-              <span className="text-amber-800">{order.totalAmount} ETB</span>
+              <span className="text-amber-400">{order.totalAmount} ETB</span>
             </div>
           </div>
 
           {/* Customer Order Completion Action */}
           {order.status !== 'COMPLETED' && order.status !== 'CANCELLED' && (
-            <div className="pt-4 border-t border-stone-100">
-              <button
-                onClick={handleCustomerComplete}
-                disabled={submittingComplete}
-                className="w-full py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                {submittingComplete ? (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <>
-                    <CheckCircle2 className="w-5 h-5" />
+            <div className="pt-4 border-t border-stone-800">
+              {order.status === 'READY' ? (
+                <button
+                  onClick={handleCustomerComplete}
+                  disabled={submittingComplete}
+                  className="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs shadow-md transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {submittingComplete ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>{t.markReceivedBtn}</span>
+                    </>
+                  )}
+                </button>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  <button
+                    disabled
+                    className="w-full py-3.5 rounded-xl bg-stone-800 text-stone-500 font-semibold text-xs cursor-not-allowed flex items-center justify-center gap-2 border border-stone-800"
+                  >
+                    <CheckCircle2 className="w-4 h-4 text-stone-600" />
                     <span>{t.markReceivedBtn}</span>
-                  </>
-                )}
-              </button>
+                  </button>
+                  <p className="text-[11px] text-center text-amber-500/90 font-medium px-2">
+                    {t.waitingForReadyNotice}
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </div>
