@@ -1,15 +1,14 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Utensils,
   Plus,
   Minus,
   Send,
-  CheckCircle2,
   Clock,
   KeyRound,
-  X,
   RefreshCw,
   LogOut,
 } from 'lucide-react';
@@ -19,6 +18,7 @@ import { logout, setCredentials } from '../../lib/store/slices/authSlice';
 import { formatOrderTime, getRelativeTimeAgo } from '../../lib/formatTime';
 
 export default function WaiterPosPage() {
+  const router = useRouter();
   const dispatch = useAppDispatch();
   const auth = useAppSelector((state) => state.auth);
 
@@ -35,15 +35,32 @@ export default function WaiterPosPage() {
   const [submitting, setSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
 
+  const loadTables = useCallback(async () => {
+    try {
+      const res = await api.getTables();
+      setTables(res || []);
+    } catch (err) {
+      console.error('Error loading tables:', err);
+    }
+  }, []);
+
+  const loadMenu = useCallback(async () => {
+    try {
+      const res = await api.getMenu(false, 'en');
+      if (res && res.categories) setCategories(res.categories);
+    } catch (err) {
+      console.error('Error loading menu:', err);
+    }
+  }, []);
+
   useEffect(() => {
-    // Check if authenticated
     if (!auth.accessToken && !auth.user) {
       setPinModalOpen(true);
     } else {
       loadTables();
       loadMenu();
     }
-  }, [auth.accessToken]);
+  }, [auth.accessToken, auth.user, loadTables, loadMenu]);
 
   const handlePinSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,30 +80,12 @@ export default function WaiterPosPage() {
     }
   };
 
-  const loadTables = async () => {
-    try {
-      const res = await api.getTables();
-      setTables(res);
-    } catch (err) {
-      console.error('Error loading tables:', err);
-    }
-  };
-
-  const loadMenu = async () => {
-    try {
-      const res = await api.getMenu(false, 'en');
-      if (res && res.categories) setCategories(res.categories);
-    } catch (err) {
-      console.error('Error loading menu:', err);
-    }
-  };
-
   const handleSelectTable = async (tbl: any) => {
     setSelectedTable(tbl);
     setCartItems([]);
     try {
       const active = await api.getTableOrders(tbl.id);
-      setActiveTableOrders(active);
+      setActiveTableOrders(active || []);
     } catch (err) {
       console.error('Error loading active table orders:', err);
     }
@@ -150,17 +149,17 @@ export default function WaiterPosPage() {
   const cartSubtotal = cartItems.reduce((acc, i) => acc + i.price * i.quantity, 0);
 
   return (
-    <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] flex flex-col font-sans transition-colors duration-200">
+    <div className="min-h-screen bg-stone-950 text-stone-100 flex flex-col font-sans">
       {/* Header */}
-      <header className="bg-[var(--color-surface)] border-b border-stone-700 px-6 py-4 flex items-center justify-between">
+      <header className="bg-stone-900 border-b border-stone-800 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[var(--color-primary)] flex items-center justify-center text-white font-bold shadow-lg">
+          <div className="w-10 h-10 rounded-xl bg-amber-600 flex items-center justify-center text-white font-bold shadow-md">
             <Utensils className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="font-bold text-lg text-white">Waiter Tablet POS</h1>
+            <h1 className="font-bold text-base text-white">Waiter Tablet POS</h1>
             <p className="text-xs text-stone-400">
-              Staff: <span className="text-[var(--color-accent)] font-semibold">{auth.user?.name || 'Abebe (Waiter)'}</span>
+              Staff: <span className="text-amber-400 font-semibold">{auth.user?.name || 'Abebe (Waiter)'}</span>
             </p>
           </div>
         </div>
@@ -168,29 +167,34 @@ export default function WaiterPosPage() {
         <div className="flex items-center gap-3">
           <button
             onClick={loadTables}
-            className="p-2 rounded-xl bg-stone-700 hover:bg-stone-600 text-stone-200 transition-colors"
+            className="p-2 rounded-xl bg-stone-800 hover:bg-stone-700 border border-stone-700 text-stone-200 transition-colors"
+            title="Refresh Tables"
           >
             <RefreshCw className="w-4 h-4" />
           </button>
           <button
             onClick={() => {
               dispatch(logout());
-              setPinModalOpen(true);
+              if (typeof window !== 'undefined') {
+                localStorage.removeItem('accessToken');
+                localStorage.removeItem('refreshToken');
+              }
+              router.push('/login');
             }}
-            className="px-3 py-1.5 rounded-xl bg-red-900/50 hover:bg-red-900 text-red-200 border border-red-700 text-xs font-bold flex items-center gap-1.5"
+            className="px-3.5 py-2 rounded-xl bg-red-950/80 hover:bg-red-900 text-red-200 border border-red-800 text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm"
           >
-            <LogOut className="w-3.5 h-3.5" />
-            <span>Lock / Logout</span>
+            <LogOut className="w-4 h-4" />
+            <span>Sign Out</span>
           </button>
         </div>
       </header>
 
-      {/* Main Grid */}
+      {/* Main Responsive Grid Layout */}
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-0 overflow-hidden">
         {/* Left Column: Tables Grid (4 cols) */}
-        <div className="lg:col-span-4 bg-[var(--color-bg)] border-r border-stone-800 p-4 flex flex-col gap-4 overflow-y-auto">
+        <div className="lg:col-span-4 bg-stone-950 border-r border-stone-800 p-4 flex flex-col gap-4 overflow-y-auto">
           <h2 className="text-xs font-bold uppercase tracking-wider text-stone-400">
-            Select Table
+            Select Dining Table
           </h2>
 
           <div className="grid grid-cols-2 gap-3">
@@ -202,13 +206,13 @@ export default function WaiterPosPage() {
                   onClick={() => handleSelectTable(tbl)}
                   className={`p-4 rounded-2xl border text-left flex flex-col justify-between gap-2 transition-all ${
                     isSelected
-                      ? 'bg-[var(--color-primary)] border-[var(--color-accent)] text-white shadow-lg'
-                      : 'bg-[var(--color-surface)] border-stone-700 hover:border-stone-600 text-stone-200'
+                      ? 'bg-amber-600 border-amber-500 text-white shadow-lg'
+                      : 'bg-stone-900 border-stone-800 hover:border-stone-700 text-stone-200'
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-extrabold text-base">T-{tbl.number}</span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-stone-900/60 text-stone-300">
+                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-stone-950/70 text-stone-300 font-medium">
                       {tbl.effectiveServiceModel}
                     </span>
                   </div>
@@ -219,8 +223,8 @@ export default function WaiterPosPage() {
           </div>
         </div>
 
-        {/* Middle Column: Menu Items Puncher (5 cols) */}
-        <div className="lg:col-span-5 bg-stone-800/50 p-4 flex flex-col gap-4 overflow-y-auto border-r border-stone-800">
+        {/* Middle Column: Quick Punch Menu (5 cols) */}
+        <div className="lg:col-span-5 bg-stone-900/50 p-4 flex flex-col gap-4 overflow-y-auto border-r border-stone-800">
           <h2 className="text-xs font-bold uppercase tracking-wider text-stone-400">
             Quick Punch Menu Items
           </h2>
@@ -229,7 +233,7 @@ export default function WaiterPosPage() {
             <div className="flex flex-col gap-6">
               {categories.map((cat) => (
                 <div key={cat.id} className="flex flex-col gap-2">
-                  <h3 className="text-xs font-bold text-[var(--color-accent)] border-b border-stone-700 pb-1">
+                  <h3 className="text-xs font-bold text-amber-400 border-b border-stone-800 pb-1">
                     {cat.name}
                   </h3>
                   <div className="grid grid-cols-2 gap-2">
@@ -237,10 +241,10 @@ export default function WaiterPosPage() {
                       <button
                         key={item.id}
                         onClick={() => handleAddItemToWaiterCart(item)}
-                        className="p-3 rounded-xl bg-[var(--color-surface)] hover:bg-stone-700 border border-stone-700 text-left flex flex-col justify-between gap-1 transition-all"
+                        className="p-3 rounded-xl bg-stone-900 hover:bg-stone-800 border border-stone-800 text-left flex flex-col justify-between gap-1 transition-all"
                       >
                         <span className="font-semibold text-xs text-stone-100">{item.name}</span>
-                        <span className="font-extrabold text-xs text-[var(--color-accent)]">{item.price} ETB</span>
+                        <span className="font-bold text-xs text-amber-400">{item.price} ETB</span>
                       </button>
                     ))}
                   </div>
@@ -248,45 +252,45 @@ export default function WaiterPosPage() {
               ))}
             </div>
           ) : (
-            <div className="py-20 text-center text-stone-500 text-xs">
+            <div className="py-20 text-center text-stone-500 text-xs font-medium">
               Select a table from the left column to start punching items.
             </div>
           )}
         </div>
 
-        {/* Right Column: Order Punch Ticket & Active Orders (3 cols) */}
-        <div className="lg:col-span-3 bg-[var(--color-bg)] p-4 flex flex-col justify-between gap-4 overflow-y-auto">
+        {/* Right Column: Order Ticket & Active Table Orders (3 cols) */}
+        <div className="lg:col-span-3 bg-stone-950 p-4 flex flex-col justify-between gap-4 overflow-y-auto">
           <div>
             <div className="flex items-center justify-between border-b border-stone-800 pb-3">
               <h2 className="text-xs font-bold uppercase tracking-wider text-stone-400">
-                Current Table Ticket
+                Current Ticket
               </h2>
               {selectedTable && (
-                <span className="font-extrabold text-xs text-[var(--color-accent)]">
+                <span className="font-bold text-xs text-amber-400">
                   Table #{selectedTable.number}
                 </span>
               )}
             </div>
 
             {successMsg && (
-              <div className="my-3 p-3 rounded-xl bg-emerald-950 border border-emerald-700 text-emerald-200 text-xs font-semibold text-center animate-in fade-in">
+              <div className="my-3 p-3 rounded-xl bg-emerald-950 border border-emerald-800 text-emerald-200 text-xs font-medium text-center">
                 {successMsg}
               </div>
             )}
 
-            {/* Cart Items list */}
+            {/* Cart Items List */}
             <div className="flex flex-col gap-2 my-4">
               {cartItems.map((item, idx) => (
                 <div
                   key={idx}
-                  className="p-2.5 rounded-xl bg-[var(--color-surface)] border border-stone-700 flex items-center justify-between text-xs"
+                  className="p-2.5 rounded-xl bg-stone-900 border border-stone-800 flex items-center justify-between text-xs"
                 >
                   <div>
-                    <p className="font-bold text-stone-200">{item.nameEn}</p>
-                    <p className="text-[10px] text-[var(--color-accent)]">{item.price * item.quantity} ETB</p>
+                    <p className="font-semibold text-stone-200">{item.nameEn}</p>
+                    <p className="text-[10px] text-amber-400">{item.price * item.quantity} ETB</p>
                   </div>
 
-                  <div className="flex items-center gap-2 bg-stone-900 px-2 py-1 rounded-lg">
+                  <div className="flex items-center gap-2 bg-stone-950 px-2 py-1 rounded-lg border border-stone-800">
                     <button
                       onClick={() => handleUpdateCartQty(idx, -1)}
                       className="text-stone-400 hover:text-white"
@@ -314,19 +318,19 @@ export default function WaiterPosPage() {
             {/* Active Fired Orders for Selected Table */}
             {selectedTable && activeTableOrders && activeTableOrders.length > 0 && (
               <div className="mt-4 pt-3 border-t border-stone-800 flex flex-col gap-2">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-amber-500 flex items-center gap-1.5">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
                   <Clock className="w-3.5 h-3.5 text-amber-500" />
-                  <span>Fired Table Orders ({activeTableOrders.length})</span>
+                  <span>Fired Orders ({activeTableOrders.length})</span>
                 </h3>
 
                 <div className="flex flex-col gap-2 max-h-48 overflow-y-auto pr-1">
                   {activeTableOrders.map((ord: any) => (
                     <div
                       key={ord.id}
-                      className="p-2.5 rounded-xl bg-stone-900 border border-stone-700/80 flex flex-col gap-1 text-xs"
+                      className="p-2.5 rounded-xl bg-stone-900 border border-stone-800 flex flex-col gap-1 text-xs"
                     >
                       <div className="flex items-center justify-between">
-                        <span className="font-extrabold text-stone-200">Order #{ord.orderNumber}</span>
+                        <span className="font-bold text-stone-200">Order #{ord.orderNumber}</span>
                         <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-950 text-amber-400 border border-amber-800">
                           {ord.status}
                         </span>
@@ -346,15 +350,15 @@ export default function WaiterPosPage() {
           </div>
 
           <div className="border-t border-stone-800 pt-3 flex flex-col gap-3">
-            <div className="flex justify-between items-center text-sm font-black">
+            <div className="flex justify-between items-center text-sm font-extrabold">
               <span className="text-stone-400">Subtotal</span>
-              <span className="text-[var(--color-accent)]">{cartSubtotal} ETB</span>
+              <span className="text-amber-400">{cartSubtotal} ETB</span>
             </div>
 
             <button
               onClick={handleFireWaiterOrder}
               disabled={submitting || cartItems.length === 0 || !selectedTable}
-              className="w-full py-3.5 rounded-xl bg-[var(--color-primary)] hover:opacity-90 text-white font-bold text-xs shadow-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+              className="w-full py-3.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs shadow-md transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
             >
               {submitting ? (
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -372,17 +376,17 @@ export default function WaiterPosPage() {
       {/* Waiter PIN Modal */}
       {pinModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="max-w-sm w-full bg-[var(--color-surface)] p-6 rounded-3xl border border-stone-700 shadow-2xl flex flex-col items-center text-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-[var(--color-primary)] text-white flex items-center justify-center shadow-lg">
+          <div className="max-w-sm w-full bg-stone-900 border border-stone-800 p-6 rounded-2xl shadow-2xl flex flex-col items-center text-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-amber-600 text-white flex items-center justify-center shadow-md">
               <KeyRound className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="font-bold text-lg text-white">Waiter PIN Auth</h3>
-              <p className="text-xs text-stone-400">Enter your 4-digit PIN code</p>
+              <h3 className="font-bold text-base text-white">Waiter PIN Auth</h3>
+              <p className="text-xs text-stone-400 mt-0.5">Enter your 4-digit PIN code</p>
             </div>
 
             {pinError && (
-              <p className="text-xs font-semibold text-red-400 bg-red-950/60 px-3 py-1.5 rounded-lg border border-red-800">
+              <p className="text-xs font-medium text-red-400 bg-red-950/80 px-3 py-1.5 rounded-xl border border-red-800">
                 {pinError}
               </p>
             )}
@@ -393,11 +397,11 @@ export default function WaiterPosPage() {
                 maxLength={4}
                 value={pinInput}
                 onChange={(e) => setPinInput(e.target.value)}
-                className="w-full text-center text-3xl font-mono tracking-[1em] py-3 rounded-xl bg-stone-900 border border-stone-700 text-[var(--color-accent)] focus:outline-none focus:border-[var(--color-primary)]"
+                className="w-full text-center text-2xl font-mono tracking-[0.8em] py-3 rounded-xl bg-stone-950 border border-stone-800 text-amber-400 focus:outline-none focus:border-amber-600"
               />
               <button
                 type="submit"
-                className="w-full py-3 rounded-xl bg-[var(--color-primary)] hover:opacity-90 text-white font-bold text-xs shadow-lg transition-colors"
+                className="w-full py-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs shadow-md transition-colors"
               >
                 Authenticate POS
               </button>
