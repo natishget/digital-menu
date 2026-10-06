@@ -1,10 +1,10 @@
 'use client';
 
 import React from 'react';
-import { useAdminData } from './layout';
-import OverviewSection from '../../components/admin/OverviewSection';
+import { useAdminData } from '../layout';
+import OverviewSection from '../../../components/admin/OverviewSection';
 
-export default function AdminPage() {
+export default function DashboardPage() {
   const { tables, adminMenu, staffUsers, fastingAutoSchedule, serviceModel } = useAdminData();
 
   return (
