@@ -216,12 +216,62 @@ async function main() {
     },
   });
 
-  // Category 4: Refreshing Cold Juices
+  // Category 4: Chicken Dishes (Chicken Orders / ወርፋ)
+  const chickenCat = await prisma.category.create({
+    data: {
+      nameEn: 'Chicken Dishes',
+      nameAm: 'የዶሮ ምግቦች',
+      sortOrder: 4,
+    },
+  });
+
+  const CHICKEN_STATION = (FulfillmentStation as any).CHICKEN || 'CHICKEN';
+
+  await prisma.menuItem.create({
+    data: {
+      categoryId: chickenCat.id,
+      nameEn: 'Crispy Fried Chicken',
+      nameAm: 'የተጠበሰ ዶሮ (ክሪስፒ)',
+      descriptionEn: 'Golden crispy fried chicken seasoned with house herbal blend, served with garlic dip and fresh fries.',
+      descriptionAm: 'በልዩ ቅመማ ቅመም የተጠበሰ ጥርት ያለ ዶሮ ከነጭ ሽንኩርት ሶስና ከቺፕስ ጋር።',
+      price: 320.0,
+      isFastingFriendly: false,
+      fulfillmentStation: CHICKEN_STATION as FulfillmentStation,
+    },
+  });
+
+  await prisma.menuItem.create({
+    data: {
+      categoryId: chickenCat.id,
+      nameEn: 'Spicy Chicken Wings',
+      nameAm: 'የተቀመመ የዶሮ ክንፍ',
+      descriptionEn: 'Juicy chicken wings glazed in spicy berbere-honey sauce.',
+      descriptionAm: 'በበርበሬና ማር መረቅ የተለወሰ ጣፋጭ የዶሮ ክንፍ።',
+      price: 240.0,
+      isFastingFriendly: false,
+      fulfillmentStation: CHICKEN_STATION as FulfillmentStation,
+    },
+  });
+
+  await prisma.menuItem.create({
+    data: {
+      categoryId: chickenCat.id,
+      nameEn: 'Traditional Doro Wot with Egg',
+      nameAm: 'ባህላዊ የዶሮ ወጥ ከእንቁላል ጋር',
+      descriptionEn: 'Slow-simmered chicken stew with berbere, spiced butter, boiled egg and sourdough Injera.',
+      descriptionAm: 'በቀይ በርበሬና በንጥር ቅቤ የተሰራ ባህላዊ የዶሮ ወጥ ከቀቀል እንቁላልና ከእንጀራ ጋር።',
+      price: 380.0,
+      isFastingFriendly: false,
+      fulfillmentStation: CHICKEN_STATION as FulfillmentStation,
+    },
+  });
+
+  // Category 5: Refreshing Cold Juices
   const coldDrinksCat = await prisma.category.create({
     data: {
       nameEn: 'Cold Juices & Spris',
       nameAm: 'ቀዝቃዛ ጁሶችና ስፕሪስ',
-      sortOrder: 4,
+      sortOrder: 5,
     },
   });
 

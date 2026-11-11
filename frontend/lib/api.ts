@@ -65,6 +65,10 @@ export const api = {
 
   completeCustomerOrder: (orderId: string) =>
     fetchApi(`/orders/public/${orderId}/complete`, { method: 'PUT' }),
+  getChickenQueue: (orderId?: string) => {
+    const q = orderId ? `?orderId=${encodeURIComponent(orderId)}` : '';
+    return fetchApi(`/orders/public/chicken-queue${q}`);
+  },
   getStationTickets: (station: string) => fetchApi(`/kot/station?station=${station}`),
   updateKotTicketStatus: (id: string, status: string) =>
     fetchApi(`/kot/tickets/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }),

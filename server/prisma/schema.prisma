@@ -24,6 +24,7 @@ enum ServiceModel {
 enum FulfillmentStation {
   BARISTA
   KITCHEN
+  CHICKEN
 }
 
 enum OrderStatus {

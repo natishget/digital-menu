@@ -28,15 +28,23 @@ export class KotService {
     const stationMap: Record<FulfillmentStation, typeof order.items> = {
       [FulfillmentStation.BARISTA]: [],
       [FulfillmentStation.KITCHEN]: [],
+      [FulfillmentStation.CHICKEN]: [],
     };
 
     for (const item of order.items) {
-      stationMap[item.fulfillmentStation].push(item);
+      if (stationMap[item.fulfillmentStation]) {
+        stationMap[item.fulfillmentStation].push(item);
+      }
     }
 
     const createdTickets: any[] = [];
+    let chickenTicketCreated = false;
 
-    for (const station of [FulfillmentStation.BARISTA, FulfillmentStation.KITCHEN]) {
+    for (const station of [
+      FulfillmentStation.BARISTA,
+      FulfillmentStation.KITCHEN,
+      FulfillmentStation.CHICKEN,
+    ]) {
       const stationItems = stationMap[station];
       if (stationItems.length > 0) {
         const ticketNumber = `KOT-#${order.orderNumber}-${station.substring(0, 3)}`;
@@ -59,7 +67,14 @@ export class KotService {
 
         createdTickets.push({ ...ticket, items: stationItems });
         this.eventsGateway.emitKotTicketUpdated({ ...ticket, items: stationItems, tableNumber: order.tableId });
+        if (station === FulfillmentStation.CHICKEN) {
+          chickenTicketCreated = true;
+        }
       }
+    }
+
+    if (chickenTicketCreated) {
+      this.eventsGateway.emitChickenQueueUpdated();
     }
 
     return createdTickets;
@@ -139,6 +154,9 @@ export class KotService {
     }
 
     this.eventsGateway.emitKotTicketUpdated(updatedTicket);
+    if (updatedTicket.station === FulfillmentStation.CHICKEN) {
+      this.eventsGateway.emitChickenQueueUpdated(updatedTicket);
+    }
     return updatedTicket;
   }
 
@@ -164,6 +182,112 @@ export class KotService {
     });
 
     this.eventsGateway.emitOrderStatusChanged(ticket.orderId, OrderStatus.COMPLETED, updatedOrder);
+    this.eventsGateway.emitChickenQueueUpdated();
     return updatedOrder;
+  }
+
+  async getChickenQueue(currentOrderId?: string) {
+    const tickets = await this.prisma.kotTicket.findMany({
+      where: {
+        station: FulfillmentStation.CHICKEN,
+        status: { in: [KotStatus.PENDING, KotStatus.PREPARING, KotStatus.READY] },
+        order: {
+          status: { notIn: [OrderStatus.COMPLETED, OrderStatus.CANCELLED] },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+      include: {
+        order: {
+          include: {
+            table: true,
+            items: {
+              include: {
+                itemModifiers: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const cookingTickets: any[] = [];
+    const waitingTickets: any[] = [];
+    const readyTickets: any[] = [];
+
+    for (const t of tickets) {
+      if (t.status === KotStatus.PREPARING) {
+        cookingTickets.push(t);
+      } else if (t.status === KotStatus.PENDING) {
+        waitingTickets.push(t);
+      } else if (t.status === KotStatus.READY) {
+        readyTickets.push(t);
+      }
+    }
+
+    // Public sanitize helper: food items and status only, NO customer name, NO customer phone, NO price
+    const formatTicket = (t: any, positionInLine: number | null) => {
+      const chickenItems = t.order.items
+        .filter((item: any) => item.fulfillmentStation === FulfillmentStation.CHICKEN)
+        .map((item: any) => ({
+          itemNameEn: item.historicalItemNameEn,
+          itemNameAm: item.historicalItemNameAm,
+          quantity: item.quantity,
+          modifiers: item.itemModifiers.map((m: any) => ({
+            nameEn: m.historicalModifierNameEn,
+            nameAm: m.historicalModifierNameAm,
+          })),
+        }));
+
+      const isCurrentCustomer = currentOrderId ? t.orderId === currentOrderId : false;
+
+      return {
+        id: t.id,
+        ticketNumber: t.ticketNumber,
+        orderId: t.orderId,
+        orderNumber: t.order.orderNumber,
+        status: t.status,
+        positionInLine,
+        prepStartedAt: t.prepStartedAt,
+        readyAt: t.readyAt,
+        createdAt: t.createdAt,
+        items: chickenItems,
+        isCurrentCustomer,
+      };
+    };
+
+    const formattedCooking = cookingTickets.map((t) => formatTicket(t, null));
+    const formattedWaiting = waitingTickets.map((t, idx) => formatTicket(t, idx + 1));
+    const formattedReady = readyTickets.map((t) => formatTicket(t, null));
+
+    let currentCustomerStatus: any = null;
+    if (currentOrderId) {
+      const all = [...formattedCooking, ...formattedWaiting, ...formattedReady];
+      const match = all.find((t) => t.isCurrentCustomer);
+      if (match) {
+        currentCustomerStatus = {
+          found: true,
+          ticketNumber: match.ticketNumber,
+          orderNumber: match.orderNumber,
+          status: match.status,
+          positionInLine: match.positionInLine,
+          ordersAhead: match.positionInLine ? match.positionInLine - 1 : 0,
+          items: match.items,
+        };
+      } else {
+        currentCustomerStatus = { found: false };
+      }
+    }
+
+    return {
+      totalActive: tickets.length,
+      cookingCount: cookingTickets.length,
+      waitingCount: waitingTickets.length,
+      readyCount: readyTickets.length,
+      currentCustomerStatus,
+      cooking: formattedCooking,
+      waiting: formattedWaiting,
+      ready: formattedReady,
+      all: [...formattedCooking, ...formattedWaiting, ...formattedReady],
+    };
   }
 }

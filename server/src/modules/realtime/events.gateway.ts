@@ -51,6 +51,12 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     console.log(`Socket ${client.id} joined room cashier_room`);
   }
 
+  @SubscribeMessage('join:chicken_queue')
+  handleJoinChickenQueue(@ConnectedSocket() client: Socket) {
+    client.join('chicken_queue_room');
+    console.log(`Socket ${client.id} joined room chicken_queue_room`);
+  }
+
   // Helper broadcast methods
   emitOrderCreated(order: any) {
     this.server.emit('order:created', order);
@@ -60,10 +66,19 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   emitOrderStatusChanged(orderId: string, status: string, orderData?: any) {
     this.server.to(`order_${orderId}`).emit('order:status_updated', { orderId, status, order: orderData });
     this.server.emit('order:status_updated_global', { orderId, status });
+    this.emitChickenQueueUpdated();
   }
 
   emitKotTicketUpdated(ticket: any) {
     this.server.to(`station_${ticket.station}`).emit('kot:ticket_updated', ticket);
     this.server.emit('kot:ticket_updated_global', ticket);
+    if (ticket.station === 'CHICKEN') {
+      this.emitChickenQueueUpdated(ticket);
+    }
+  }
+
+  emitChickenQueueUpdated(data?: any) {
+    this.server.to('chicken_queue_room').emit('chicken_queue:updated', data);
+    this.server.emit('chicken_queue:updated_global', data);
   }
 }

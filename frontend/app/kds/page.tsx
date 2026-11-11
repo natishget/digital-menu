@@ -6,6 +6,7 @@ import {
   MonitorCheck,
   ChefHat,
   Coffee,
+  Flame,
   Clock,
   CheckCircle2,
   Play,
@@ -23,7 +24,7 @@ import { formatOrderTime, getRelativeTimeAgo } from '../../lib/formatTime';
 export default function KdsPage() {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const [station, setStation] = useState<'KITCHEN' | 'BARISTA'>('KITCHEN');
+  const [station, setStation] = useState<'KITCHEN' | 'BARISTA' | 'CHICKEN'>('KITCHEN');
   const [tickets, setTickets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [audioEnabled, setAudioEnabled] = useState(false);
@@ -159,6 +160,17 @@ export default function KdsPage() {
             >
               <Coffee className="w-3.5 h-3.5" />
               <span>Barista</span>
+            </button>
+            <button
+              onClick={() => setStation('CHICKEN')}
+              className={`px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors ${
+                station === 'CHICKEN'
+                  ? 'bg-amber-600 text-white shadow-xs'
+                  : 'text-stone-400 hover:text-white'
+              }`}
+            >
+              <Flame className="w-3.5 h-3.5" />
+              <span>Chicken ("ወርፋ")</span>
             </button>
           </div>
 

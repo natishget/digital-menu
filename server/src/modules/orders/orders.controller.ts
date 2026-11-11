@@ -28,6 +28,11 @@ export class OrdersController {
     return this.ordersService.getCashierOrdersQueue();
   }
 
+  @Get('public/chicken-queue')
+  getChickenQueue(@Query('orderId') orderId?: string) {
+    return this.ordersService.getChickenQueue(orderId);
+  }
+
   @Get('public/phone-active')
   getActiveOrdersByPhone(@Query('phone') phone: string) {
     return this.ordersService.getActiveOrdersByPhone(phone);

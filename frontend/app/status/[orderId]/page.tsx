@@ -9,6 +9,7 @@ import {
   Coffee,
   Sparkles,
   ArrowLeft,
+  Flame,
 } from 'lucide-react';
 import { getSocket } from '../../providers';
 import { api } from '../../../lib/api';
@@ -57,6 +58,10 @@ export default function OrderStatusPage({ params }: { params: Promise<{ orderId:
 
   useEffect(() => {
     if (!orderId) return;
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('lastPlacedOrderId', orderId);
+    }
 
     api
       .getOrder(orderId)
@@ -155,6 +160,12 @@ export default function OrderStatusPage({ params }: { params: Promise<{ orderId:
   };
 
   const currentStepIdx = getStepIndex(order.status);
+  const hasChickenItems = order?.items?.some(
+    (item: any) =>
+      item.fulfillmentStation === 'CHICKEN' ||
+      item.historicalItemNameEn?.toLowerCase().includes('chicken') ||
+      item.historicalItemNameAm?.includes('ዶሮ'),
+  );
 
   return (
     <div className="min-h-screen bg-stone-950 text-stone-100 flex flex-col items-center p-4 py-8 font-sans">
@@ -303,6 +314,46 @@ export default function OrderStatusPage({ params }: { params: Promise<{ orderId:
             </div>
           )}
         </div>
+
+        {/* Dedicated Chicken Orders Queue ("ወረፋ") Card */}
+        {hasChickenItems && (
+          <div className="bg-linear-to-r from-red-950/70 via-amber-950/60 to-stone-900 border border-amber-700/80 p-5 rounded-2xl shadow-xl flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-red-600 text-white flex items-center justify-center shadow-xs">
+                  <Flame className="w-4 h-4 animate-pulse" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-sm text-white">
+                    {language === 'am' ? 'ወርፋ' : 'Chicken Orders ("ወረፋ")'}
+                  </h3>
+                  <span className="text-[10px] text-amber-400 font-medium">
+                    {language === 'am' ? 'የትዕዛዝዎን ደረጃ በወርፋ ይመልከቱ' : 'Track your spot in the queue'}
+                  </span>
+                </div>
+              </div>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-950 text-red-300 border border-red-800">
+                Live
+              </span>
+            </div>
+
+            <p className="text-xs text-stone-300 leading-relaxed">
+              {language === 'am'
+                ? 'የትዕዛዝዎ ሁኔታ በወርፋ ውስጥ የት እንዳለ እና ሌሎች የሚጠበሱ ትዕዛዞችን በቀጥታ ይመልከቱ።'
+                : 'See where your chicken is in the queue, watch other orders cooking or waiting, and see your exact turn.'}
+            </p>
+
+            <Link
+              href={`/queue/chicken?orderId=${orderId}`}
+              className="w-full py-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs shadow-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Flame className="w-4 h-4" />
+              <span>
+                {language === 'am' ? 'ቀጥታ ወርፋን ይመልከቱ' : 'View Live Chicken Queue ("ወረፋ")'}
+              </span>
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );

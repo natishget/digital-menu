@@ -5,17 +5,23 @@ import { RolesGuard, Roles } from '../../common/guards/roles.guard';
 import { Role, FulfillmentStation, KotStatus } from '@prisma/client';
 
 @Controller('kot')
-@UseGuards(JwtAuthGuard, RolesGuard)
 export class KotController {
   constructor(private kotService: KotService) {}
 
+  @Get('public/chicken-queue')
+  getPublicChickenQueue(@Query('orderId') orderId?: string) {
+    return this.kotService.getChickenQueue(orderId);
+  }
+
   @Get('station')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.KITCHEN_STAFF, Role.BARISTA, Role.ADMIN, Role.MANAGER)
   getStationTickets(@Query('station') station: FulfillmentStation) {
     return this.kotService.getStationTickets(station);
   }
 
   @Put('tickets/:id/status')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.KITCHEN_STAFF, Role.BARISTA, Role.ADMIN, Role.MANAGER)
   updateStatus(
     @Param('id') id: string,
@@ -25,6 +31,7 @@ export class KotController {
   }
 
   @Put('tickets/:id/complete')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.KITCHEN_STAFF, Role.BARISTA, Role.ADMIN, Role.MANAGER)
   completeOrderFromKot(@Param('id') id: string) {
     return this.kotService.completeOrderFromKot(id);

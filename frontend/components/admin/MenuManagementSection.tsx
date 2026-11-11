@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Plus, Trash2, Utensils, Search, Coffee, Leaf } from 'lucide-react';
+import { Plus, Trash2, Utensils, Search, Coffee, Leaf, Flame } from 'lucide-react';
 import { api } from '../../lib/api';
 
 interface MenuManagementSectionProps {
@@ -25,7 +25,7 @@ export default function MenuManagementSection({
   const [newItemDescAm, setNewItemDescAm] = useState('');
   const [newItemPrice, setNewItemPrice] = useState<number>(120);
   const [newItemFasting, setNewItemFasting] = useState(false);
-  const [newItemStation, setNewItemStation] = useState<'KITCHEN' | 'BARISTA'>('KITCHEN');
+  const [newItemStation, setNewItemStation] = useState<'KITCHEN' | 'BARISTA' | 'CHICKEN'>('KITCHEN');
 
   // Search & Filter state
   const [menuSearchQuery, setMenuSearchQuery] = useState('');
@@ -212,6 +212,7 @@ export default function MenuManagementSection({
                 >
                   <option value="KITCHEN">Kitchen Station</option>
                   <option value="BARISTA">Barista Station</option>
+                  <option value="CHICKEN">Chicken Station ("ወርፋ")</option>
                 </select>
               </div>
 
@@ -416,11 +417,15 @@ export default function MenuManagementSection({
                                   className={`px-2 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-1 border ${
                                     item.fulfillmentStation === 'BARISTA'
                                       ? 'bg-amber-950 text-amber-300 border-amber-800'
+                                      : item.fulfillmentStation === 'CHICKEN'
+                                      ? 'bg-red-950 text-red-300 border-red-800'
                                       : 'bg-blue-950 text-blue-300 border-blue-800'
                                   }`}
                                 >
                                   {item.fulfillmentStation === 'BARISTA' ? (
                                     <Coffee className="w-3 h-3" />
+                                  ) : item.fulfillmentStation === 'CHICKEN' ? (
+                                    <Flame className="w-3 h-3 text-red-400" />
                                   ) : (
                                     <Utensils className="w-3 h-3" />
                                   )}

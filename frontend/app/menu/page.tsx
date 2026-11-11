@@ -2,10 +2,12 @@
 
 import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
   Coffee,
   Globe,
   Leaf,
+  Flame,
   ShoppingCart,
   Plus,
   Minus,
@@ -461,6 +463,17 @@ function CustomerMenuContent() {
               <Leaf className="w-3.5 h-3.5 text-emerald-400" />
               <span>{t.fastingFilter}</span>
             </button>
+
+            {/* Chicken Queue ("ወረፋ") Button */}
+            <Link
+              href="/queue/chicken"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-xl bg-red-950/80 hover:bg-red-900 text-red-200 border border-red-800 shadow-xs transition-colors"
+            >
+              <Flame className="w-3.5 h-3.5 text-red-400" />
+              <span className="hidden sm:inline">
+                {language === 'am' ? 'ወርፋ' : 'Chicken Orders ("ወረፋ")'}
+              </span>
+            </Link>
 
             {/* Track Order Button */}
             <button

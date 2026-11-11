@@ -415,4 +415,8 @@ export class OrdersService {
       })),
     };
   }
+
+  async getChickenQueue(orderId?: string) {
+    return this.kotService.getChickenQueue(orderId);
+  }
 }
